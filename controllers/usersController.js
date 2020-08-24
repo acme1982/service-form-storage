@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const {
 	registerValidator,
-	loginValidator
+	loginValidator,
 } = require('../routes/userValidation');
 
 // @desc register user
@@ -16,7 +16,7 @@ exports.registerUser = async (req, res, next) => {
 		return next(
 			res.status(400).json({
 				success: false,
-				message: error
+				message: error,
 			})
 		);
 	}
@@ -34,16 +34,24 @@ exports.registerUser = async (req, res, next) => {
 		const user = await User.create({
 			username: req.body.username,
 			email: req.body.email,
-			password: hashedPassword
+			password: hashedPassword,
 		});
+		const token = jwt.sign({ _id: user._id }, process.env.TOKEN_SECRET, {
+			expiresIn: 3600,
+		});
+		res.header('auth-token', token);
 		return res.status(201).json({
 			success: true,
-			message: `user ${user._id} saved successfully.`
+			token,
+			user: {
+				username: user.username,
+				email: user.email,
+			},
 		});
 	} catch (err) {
 		return res.status(500).json({
 			success: false,
-			message: 'Server error.'
+			message: 'Server error.',
 		});
 	}
 };
@@ -59,24 +67,24 @@ exports.loginUser = async (req, res, next) => {
 		return next(
 			res.status(400).json({
 				success: false,
-				message: error
+				message: error,
 			})
 		);
 	}
 	// Check if email exist in DB.
 	const user = await User.findOne({
-		email: req.body.email
+		email: req.body.email,
 	});
 	if (!user) {
 		return next(
 			res.status(400).json({
 				success: false,
-				message: 'Email not found.'
+				message: 'Email not found.',
 			})
 		);
 	}
 	try {
-		const { password, username } = user;
+		const { password, username, _id, email } = user;
 		// Check for password.
 		const isPassword = await bcrypt.compare(req.body.password, password);
 		if (!isPassword) {
@@ -87,7 +95,7 @@ exports.loginUser = async (req, res, next) => {
 					() =>
 						res.status(401).json({
 							success: false,
-							message: 'Did you forgot your password?'
+							message: 'Did you forgot your password?',
 						}),
 					3000,
 					(wrongPassword = 0)
@@ -96,20 +104,37 @@ exports.loginUser = async (req, res, next) => {
 
 			return res.status(401).json({
 				success: false,
-				message: 'Wrong email and or password.'
+				message: 'Wrong email and or password.',
 			});
 		} else {
-			const token = jwt.sign({ _id: user._id }, process.env.TOKEN_SECRET);
+			const token = jwt.sign({ _id: user._id }, process.env.TOKEN_SECRET, {
+				expiresIn: 3600,
+			});
 			res.header('auth-token', token);
 			return res.status(200).json({
 				success: true,
-				message: `Welcome back. ${username}`
+				token,
+				user: {
+					_id,
+					username,
+					email,
+				},
 			});
 		}
 	} catch (err) {
 		return res.status(500).json({
 			success: false,
-			message: 'Server Error.'
+			message: 'Server Error.',
 		});
 	}
+};
+
+// @desc GET USER (to be able to check in frontend if user is logged in)
+// @route GET /api/v1/user
+// @access private
+exports.getUser = async (req, res) => {
+	const { _id } = req.user;
+	User.findById(_id)
+		.select('-password')
+		.then((user) => res.json(user));
 };

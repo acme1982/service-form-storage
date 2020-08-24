@@ -1,21 +1,20 @@
-import React, { Component } from 'react';
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
-import history from '../config/history';
+import React from 'react';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import { loadUser } from '../actions/authActions';
+import { connect } from 'react-redux';
+import AppNavBar from './AppNavBar';
 
-import Services from './Services';
-import Login from './Login';
-
-class App extends Component {
+class App extends React.Component {
+	componentDidMount = () => {
+		this.props.loadUser();
+	};
 	render() {
 		return (
-			<Router history={history}>
-				<Switch>
-					<Route path="/" exact component={Services} />
-					<Route path="/login" exact component={Login} />
-				</Switch>
-			</Router>
+			<div>
+				<AppNavBar />
+			</div>
 		);
 	}
 }
 
-export default App;
+export default connect(null, { loadUser })(App);

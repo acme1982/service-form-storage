@@ -1,9 +1,11 @@
 import { combineReducers } from 'redux';
 import { reducer as reduxFormReducer } from 'redux-form';
 
-import fetchServices from '../reducers/servicesReducer';
+import authReducer from './authReducer';
+import errorReducer from './errorReducer';
 
 export default combineReducers({
-	services: fetchServices,
-	form: reduxFormReducer
+	form: reduxFormReducer,
+	auth: authReducer,
+	error: errorReducer,
 });
